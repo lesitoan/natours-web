@@ -9,5 +9,7 @@ router.route('/')
 router.route('/:id')
     .patch(tourController.updateTourById)
     .delete(tourController.deleteTourById);
+router.route('/get-monthly-plan/:year')
+    .get(tourController.getMonthlyPlan);
     
 module.exports = router;

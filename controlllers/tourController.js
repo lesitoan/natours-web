@@ -1,10 +1,11 @@
 const { query } = require('express');
 const TourModel = require('../models/tourModel');
+const ApiFeatures = require('../utils/apiFeatures');
+
 
 const createTour = async (req, res) => {
     try {
         const tour = req.body;
-        console.log(tour);
         const newTour = await TourModel.create(tour);
         return res.status(201).json({
             status: "success",
@@ -22,33 +23,9 @@ const createTour = async (req, res) => {
 
 const getAllTours = async (req, res) => {
     try {
-        const queryObj = { ...req.query };
-        const excludeFields = ['page', 'sort', 'limit', 'fields'];
-        excludeFields.forEach(element => delete queryObj[element]);
-
-        // filler data
-        let dataFiller = {};
-        if (Object.keys(queryObj).length !== 0) {
-            let index;
-            dataFiller = JSON.stringify(queryObj)
-            .split("")
-            .map((el, i) => {
-                if (el === '{' && i > 0) index = i + 2;
-                if (i === index) el = `$${el}`;
-                return el;
-            })
-            .join('');
-            dataFiller = JSON.parse(dataFiller);
-        }
-        let query = TourModel.find(dataFiller);
-
-        // sort data
-        if (req.query.sort) {
-            const sortBy = req.query.sort.split(",").join(" ");
-            query = query.sort(sortBy);
-        }
-
-        const tours = await query;
+        const feature = new ApiFeatures(TourModel, req.query);
+        let getData = feature.filter().sort().paginate().limitFields();
+        const tours = await getData.query;
         return res.status(200).json({
             status: "success",
             results: tours.length,
@@ -56,10 +33,10 @@ const getAllTours = async (req, res) => {
                 tours,
             }
         })
-    } catch (err) {
+    } catch (e) {
         return res.status(404).json({
             status: 'fail',
-            message: err,
+            message: e,
         })
     }
 }
@@ -100,10 +77,56 @@ const deleteTourById = async (req, res) => {
     } catch (err) {
         return res.status(404).json({
             status: 'fail',
-            message: err,
+            message: err
         })
     }
+}
 
+const getMonthlyPlan = async (req, res) => {
+    try {
+        const plan = await TourModel.aggregate([
+            { 
+                $unwind: "$startDates"
+            },
+            { 
+                $match : {
+                    startDates : {
+                        $gte: new Date("2021-01-01"),
+                        $lte: new Date("2022-01-01")
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: { $month : "$startDates" },
+                    count: { $sum: 1 },
+                    tours: { $push: "$name"}
+                }
+            },
+            {
+                $sort: { count: -1 }
+            },
+            {
+                $addFields: { month: "$_id" }
+            },
+            {
+                $project: { _id: 0 }
+            }
+            
+        ])
+        return res.status(200).json({
+            status: "success",
+            results: plan.length,
+            data: {
+                plan,
+            }
+        })
+    } catch (err) {
+        return res.status(404).json({
+            status: 'fail',
+            message: err
+        })
+    }
 }
 
 
@@ -111,5 +134,6 @@ module.exports = {
     getAllTours,
     createTour,
     updateTourById,
-    deleteTourById
+    deleteTourById,
+    getMonthlyPlan
 }
