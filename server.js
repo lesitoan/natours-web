@@ -25,7 +25,7 @@ const server = app.listen(port, () => {
     console.log(`app is running on port ${port}`);
 })
 
-// connect db thất bại -> đóng server
+// lỗi promise chưa được xử lí (connect db thất bại) -> đóng server
 process.on('unhandledRejection', err => {
     console.log('UNHANDLED REJECTION !, SHUTTING DOWN SERVER....');
     server.close(() => {
