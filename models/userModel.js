@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 const userSchema = mongoose.Schema({
     name: {
@@ -23,6 +24,11 @@ const userSchema = mongoose.Schema({
     photo: {
         type: String,
     },
+    role: {
+        type: String,
+        enum: ['user', 'guide', 'lead-guide', 'admin'],
+        default: 'user'
+    },
     password: {
         type: String,
         require:[true, 'must have the "password" field'],
@@ -35,7 +41,12 @@ const userSchema = mongoose.Schema({
         validate: [function(val) {
             return val === this.password; // "this"chỉ có tác dụng khi create hoặc save method
         }, 'Passwords are not the same']
-    }
+    },
+    changePasswordAt: {
+        type: Date,
+    },
+    passwordResetToken: String,
+    passwordResetExpires: Date
 });
 
 // hash password khi create hoặc update password
@@ -47,12 +58,32 @@ userSchema.pre('save',async function(next) {
     this.passwordConfirm = undefined; // trường này tạo ra trong Schema chỉ để buộc người dùng confirm mật khẩu chứ không lưu vào database
 
     next();
+});
+
+// update filed changePasswordAt
+userSchema.pre('save', function(next) {
+    if(!this.isModified('password') || this.isNew) next();
+    this.changePasswordAt = Date.now() - 1000; // -1000 vì có 1 số TH token sẽ được tạo trước khi change pass
+    next();
 })
 
 // Tạo method kiểm tra password trên tất cả document được tạo bởi userSchema
 userSchema.methods.checkPassword = async (passwordInput, passwordHash) => {
     return await bcrypt.compare(passwordInput, passwordHash);
 };
+
+// check đã thay đổi password sau khi login
+userSchema.methods.changePasswordAfter = function (timeCreateToken) {
+    if(!this.changePasswordAt) return false;
+    return timeCreateToken < Math.floor(this.changePasswordAt.getTime() / 1000);
+}
+
+userSchema.methods.createPasswordResetToken = function () {
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    this.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    this.passwordResetExpires = Date.now() + 20*60*1000;
+    return resetToken;
+}
 
 const UserModel = new mongoose.model("User", userSchema);
 

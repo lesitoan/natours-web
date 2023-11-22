@@ -29,7 +29,7 @@ const getTourById = catchAsync(async (req, res, next) => {
     })
 });
 
-const getAllTours = catchAsync(async (req, res) => {
+const getAllTours = catchAsync(async (req, res, next) => {
         const feature = new ApiFeatures(TourModel.find(), req.query);
         const getData = feature.filter().sort().paginate().limitFields();
         const tours = await getData.query;
@@ -42,7 +42,7 @@ const getAllTours = catchAsync(async (req, res) => {
         })
 });
 
-const updateTourById = catchAsync(async (req, res) => {
+const updateTourById = catchAsync(async (req, res, next) => {
         const id = req.params.id;
         const newData = req.body
         const tour = await TourModel.findByIdAndUpdate(
@@ -51,6 +51,7 @@ const updateTourById = catchAsync(async (req, res) => {
             { new: true, runValidators: true }
         );
         if(!tour) {
+            console.log('//////////')
             return next(new AppError(`Cant not found tour with id ${id}`, 404));
         }
         return res.status(200).json({
@@ -61,7 +62,7 @@ const updateTourById = catchAsync(async (req, res) => {
         })
 });
 
-const deleteTourById = catchAsync(async (req, res) => {
+const deleteTourById = catchAsync(async (req, res, next) => {
         const id = req.params.id;
         const tour = await TourModel.findByIdAndRemove(id);
         if(!tour) {
@@ -75,7 +76,7 @@ const deleteTourById = catchAsync(async (req, res) => {
         })
 });
 
-const getMonthlyPlan = catchAsync(async (req, res) => {
+const getMonthlyPlan = catchAsync(async (req, res, next) => {
         const plan = await TourModel.aggregate([
             {
                 $unwind: "$startDates"

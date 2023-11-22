@@ -5,7 +5,7 @@ const sendErrorDev = (err, res) => {
         status: err.status,
         message: err.message,
         error: err,
-        stack: err.stack
+        stack: err.stack,
     });
 }
 
@@ -42,7 +42,16 @@ const handleValidationErrorDB = (err) => {
     return new AppError(`Invalid input data: ${errors.join(', ')}`, 400);
 }
 
+const handleTokenExpired = () => {
+    return new AppError('Your token has expired. Please try again !!!', 401);
+}
+
+const handleJsonWebTokenError = () => {
+    return new AppError('Invalid token. Please try again !!!', 401);
+}
+
 module.exports = (err, req, res, next) => {
+    console.log('aaaa')
     err.statusCode = err.statusCode || 500;
     err.status = err.status || 'error'
     if(process.env.NODE_ENV === 'development') {
@@ -50,7 +59,9 @@ module.exports = (err, req, res, next) => {
     } else {
         // Lưu ý: một số thuộc tính của "err" như "name" sẽ được định nghĩa trong "prototype chain"
         // nên khi console.log(err) sẽ k tìm thấy 1 số thuộc tính đó
-        let error = {};
+        
+        let error = err; // để đây fix sau
+        let error1 = {...err};
 
         if( err.name === "CastError") { //Nhập sai data params trên URL
             error = handleCastErrorDB(err);
@@ -60,6 +71,12 @@ module.exports = (err, req, res, next) => {
         }
         if(err.name === 'ValidationError') { //Nhập sai trường required
             error = handleValidationErrorDB(err);
+        }
+        if(err.name === "TokenExpiredError") {
+            error = handleTokenExpired();
+        }
+        if(err.name === "JsonWebTokenError") {
+            error = handleJsonWebTokenError();
         }
 
         sendErrorProd(error, res);
