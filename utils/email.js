@@ -1,5 +1,6 @@
 const nodemailer = require('nodemailer');
 
+// dùng web mailtrap.io để fake nhận mail, thay vì nhận qua gmail
 const sendEmail = async options => {
     // Tạo transporter
     const transporter = nodemailer.createTransport({

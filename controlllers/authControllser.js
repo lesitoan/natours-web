@@ -12,6 +12,30 @@ const signToken = (id) => {
     });
 };
 
+const createAndSendToken = (user, statusCode, res) => {
+    const token = signToken(user._id);
+
+    // Create cookie
+    const cookieOptions = {
+        expires: new Date( Date.now() + process.env.JWT_COOKIE_EXPIRES_IN*24*60*60*1000),
+        httpOnly: true, // không cho phép client thay đổi cookie
+        secure: false
+    };
+    if(process.env.NODE_ENV === 'production') cookieOptions.secure = true;
+    res.cookie('jwt', token, cookieOptions);
+
+    // remove password output
+    user.password = undefined;
+
+    res.status(statusCode).json({
+        status: 'success',
+        token,
+        data: {
+            user
+        }
+    });
+};
+
 const signUp = catchAsync( async (req, res, next) => {
     const newUser = {
         name: req.body.name,
@@ -21,16 +45,7 @@ const signUp = catchAsync( async (req, res, next) => {
         role: req.body.role || 'user'
     }
     const user = await UserModel.create(newUser);
-
-    const token = signToken(user._id);
-
-    res.status(201).json({
-        status: 'success',
-        token,
-        data: {
-            user
-        }
-    });
+    createAndSendToken(user, 201, res);
 });
 
 const login = catchAsync( async(req, res, next) => {
@@ -45,11 +60,8 @@ const login = catchAsync( async(req, res, next) => {
     if(!user || !(await user.checkPassword(req.body.password ,user.password))) {
         return next(new AppError(`Email or Password incorrect. PLease try again !`, 401));
     };
-    const token = signToken(user._id);
-    res.status(200).json({
-        status: 'success',
-        token,
-    });
+    createAndSendToken(user, 200, res);
+
 })
 
 const authMiddleware = catchAsync( async (req, res, next) => {
@@ -140,12 +152,29 @@ const resetPassword = catchAsync( async (req, res, next) => {
     user.passworResetExpires = undefined;
     await user.save();
     // login after change password
-    const token = signToken(user._id);
-    res.status(200).json({
-        status: 'success',
-        token,
-    })
+    createAndSendToken(user, 200, res);
 });
+
+const updatePassword = catchAsync( async ( req, res, next) => {
+    // Kiểm tra user có tồn tại trong collection
+    const id = req.user.id;
+    const user = await UserModel.findById(id).select("+password");
+    // check password hiện tại === password post request
+    const checkPassword =await user.checkPassword(req.body.password, user.password);
+    if(!checkPassword) {
+        return next(new AppError( `Your password is not Exactly, please try again !!!`, 401));
+    }
+    // check password === newPassword
+    if(req.body.password === req.body.newPassword) {
+        return next(new AppError( `New password must be different current password !!!`, 400));
+    }
+    // Đổi password
+    user.password = req.body.newPassword;
+    user.passwordConfirm = req.body.newPasswordConfirm;
+    await user.save(); // không dùng được findByidAndUpdate vì các middleware trong schema không hoạt động
+    // login lại ( gửi lại jwt)
+    createAndSendToken(user, 200, res);
+})
 
 
 module.exports = {
@@ -154,5 +183,6 @@ module.exports = {
     authMiddleware,
     restrictTo,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    updatePassword
 }

@@ -46,7 +46,12 @@ const userSchema = mongoose.Schema({
         type: Date,
     },
     passwordResetToken: String,
-    passwordResetExpires: Date
+    passwordResetExpires: Date,
+    active: {
+        type: Boolean,
+        default: true,
+        select: false
+    }
 });
 
 // hash password khi create hoặc update password
@@ -65,7 +70,13 @@ userSchema.pre('save', function(next) {
     if(!this.isModified('password') || this.isNew) next();
     this.changePasswordAt = Date.now() - 1000; // -1000 vì có 1 số TH token sẽ được tạo trước khi change pass
     next();
-})
+});
+
+// khi find user, chỉ select user có "active: true" (chưa xóa)
+userSchema.pre(/^find/, function (next) {
+    this.find({ active: {$ne: false} });
+    next();
+});
 
 // Tạo method kiểm tra password trên tất cả document được tạo bởi userSchema
 userSchema.methods.checkPassword = async (passwordInput, passwordHash) => {
