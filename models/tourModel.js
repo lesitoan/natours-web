@@ -57,7 +57,7 @@ const tourSchema = new mongoose.Schema(
         summary: {
             type: String,
             trim: true,
-            required: [true, 'A tour must have a description']
+            required: [true, 'A tour must have a summary']
         },
         description: {
             type: String,
@@ -77,7 +77,36 @@ const tourSchema = new mongoose.Schema(
         secretTour: {
             type: Boolean,
             default: false
-        }
+        },
+        startLocation: {
+            type: {
+                type: String,
+                default: 'Point',
+                enum: ['Point']
+            },
+            coordinates: [Number],
+            address: String,
+            description: String
+        },
+        locations: [
+            {
+                type: {
+                    type: String,
+                    default: 'Point',
+                    enum: ['Point']
+                },
+                coordinates: [Number],
+                address: String,
+                description: String,
+                day: Number
+            }
+        ],
+        guides: [
+            {
+                type: mongoose.Schema.ObjectId,
+                ref: 'User' // Tham chiếu (referencing) đến User collection
+            }
+        ]
     },
     {
         toJSON: { virtuals: true },
@@ -88,6 +117,13 @@ const tourSchema = new mongoose.Schema(
 tourSchema.virtual('durationWeeks').get(function () {
     return this.duration / 7;
 });
+
+// Referencing đến các reviews bằng phương pháp: parent referencing
+tourSchema.virtual('reviews', { //reviews là tên filed ảo trong cha
+    ref: 'Review', //tên collection con
+    foreignField: "tour", //filed trong con (review)
+    localField: "_id" //filed trong cha (tour)
+})
 
 // DOCUMENT MIDDLEWARE: runs before .save() and .create()
 tourSchema.pre('save', function (next) {
@@ -103,6 +139,15 @@ tourSchema.pre(/^find/, function (next) {
     this.start = Date.now();
     next();
 });
+
+// reference đến User collection để lấy data cho "guides"
+tourSchema.pre(/^find/, function(next) {
+    this.populate({
+        path: 'guides',
+        select: '-__v -changePasswordAt'
+    });
+    next();
+})
 
 tourSchema.post(/^find/, function (docs, next) {
     console.log(`Query took ${Date.now() - this.start} milliseconds!`);
