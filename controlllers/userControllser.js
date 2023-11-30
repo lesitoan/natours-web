@@ -1,6 +1,7 @@
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const UserModel = require('../models/userModel');
+const handlerFactory = require('./handlerFactory');
 
 const updateMe = catchAsync (async (req, res, next) => {
     // check user update password
@@ -36,8 +37,19 @@ const deleteMe = catchAsync ( async (req, res, next) => {
     });
 });
 
+const getMe = (req, res, next) => {
+    req.params.id = req.user._id;
+    next();
+}
+
+const deleteUserById = handlerFactory.deleteOne(UserModel);
+const getUserById = handlerFactory.getOne(UserModel);
+
 
 module.exports = {
     updateMe,
-    deleteMe
+    deleteMe,
+    deleteUserById,
+    getUserById,
+    getMe
 }

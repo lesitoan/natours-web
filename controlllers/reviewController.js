@@ -1,36 +1,24 @@
 const ReviewModel = require('../models/reviewModel');
-const catchAsync = require('../utils/catchAsync');
-const AppError = require('../utils/appError');
+const handlerFactory = require('./handlerFactory');
 
-const createReview = catchAsync( async (req, res, next) => {
-    console.log('createReview')
-    let {review, rating, user, tour} = req.body; //hạn chế cliend truyền các data rác khác
+const setTourIdAndUserId = (req, res, next) => {
+    let {review, rating, user, tour} = req.body; //hạn chế client truyền các data rác khác
     if(!user) user = req.user._id;
     if(!tour) tour = req.params.tourId;
-    const reviewInput = { review, rating, user, tour};
-    const newReview = await ReviewModel.create(reviewInput);
-    res.status(201).json({
-        status: "success",
-        data: {
-            review: newReview
-        }
-    });
-});
+    req.body = { review, rating, user, tour};
+    next();
+}
 
-const getAllReviews = catchAsync( async (req, res, nect) => {
-    let filter = {};
-    if(req.params.tourId) filter = { tour: req.params.tourId };
-    const reviews = await ReviewModel.find(filter);
-    res.status(200).json({
-        status: "success",
-        results: reviews.length,
-        data: {
-            reviews
-        }
-    });
-});
+const getAllReviews = handlerFactory.getAll(ReviewModel);
+const deleteReviewById = handlerFactory.deleteOne(ReviewModel);
+const updateReviewById = handlerFactory.updateOne(ReviewModel);
+const createReview = handlerFactory.createOne(ReviewModel);
+
 
 module.exports = {
     createReview,
-    getAllReviews
+    getAllReviews, 
+    deleteReviewById,
+    updateReviewById,
+    setTourIdAndUserId
 }

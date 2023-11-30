@@ -9,14 +9,14 @@ const router = express.Router();
 router.use('/:tourId/reviews', reviewRouter);
 
 router.route('/')
-    .post(tourController.createTour)
-    .get(authController.authMiddleware, tourController.getAllTours);
+    .post(authController.authMiddleware, authController.restrictTo('admin', 'lead-guide'), tourController.createTour)
+    .get(tourController.getAllTours);
 router.route('/:id')
     .get(tourController.getTourById)
-    .patch(tourController.updateTourById)
+    .patch(authController.authMiddleware, authController.restrictTo('admin', 'lead-guide'), tourController.updateTourById)
     .delete(authController.authMiddleware, authController.restrictTo('admin', 'lead-guide'), tourController.deleteTourById);
 router.route('/get-monthly-plan/:year')
-    .get(tourController.getMonthlyPlan);
+    .get(authController.authMiddleware, authController.restrictTo('admin', 'lead-guide', 'guide'), tourController.getMonthlyPlan);
 
 
     
