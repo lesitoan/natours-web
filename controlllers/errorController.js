@@ -1,26 +1,47 @@
 const AppError = require("../utils/appError");
 
-const sendErrorDev = (err, res) => {
-    res.status(err.statusCode).json({
-        status: err.status,
-        message: err.message,
-        error: err,
-        stack: err.stack,
-    });
-}
-
-const sendErrorProd = (err, res) => {
-    if(err.isOperational) {
-        res.status(err.statusCode).json({
+const sendErrorDev = (err, req, res) => {
+    // API 
+    if (req.originalUrl.startsWith('/api')) {
+        return res.status(err.statusCode).json({
             status: err.status,
             message: err.message,
+            error: err,
+            stack: err.stack,
         });
-    } else {
-        res.status(500).json({
+    }
+    // BROWSER
+    res.status(err.statusCode).render('error', {
+        title: 'Something error',
+        message: err.message
+    })
+}
+
+const sendErrorProd = (err, req, res) => {
+    // API
+    if (req.originalUrl.startsWith('/api')) {
+        if (err.isOperational) {
+            return res.status(err.statusCode).json({
+                status: err.status,
+                message: err.message,
+            });
+        }
+        return res.status(500).json({
             status: 'error',
             message: 'Something error from the server !!!!!!!',
         });
+    };
+    // BROWSER
+    if (err.isOperational) {
+        return res.status(err.statusCode).render('error', {
+            title: 'Something error',
+            message: err.message
+        })
     }
+    res.status(500).render('error', {
+        title: 'Something error',
+        message: 'Something error from server, please try again after !!!'
+    })
 }
 
 const handleCastErrorDB = (err) => {
@@ -51,34 +72,33 @@ const handleJsonWebTokenError = () => {
 }
 
 module.exports = (err, req, res, next) => {
-    console.log('aaaa')
     err.statusCode = err.statusCode || 500;
     err.status = err.status || 'error'
-    if(process.env.NODE_ENV === 'development') {
-        sendErrorDev(err, res);
+    if (process.env.NODE_ENV === 'development') {
+        sendErrorDev(err, req, res);
     } else {
         // Lưu ý: một số thuộc tính của "err" như "name" sẽ được định nghĩa trong "prototype chain"
         // nên khi console.log(err) sẽ k tìm thấy 1 số thuộc tính đó
-        
-        let error = err; // để đây fix sau
-        let error1 = {...err};
 
-        if( err.name === "CastError") { //Nhập sai data params trên URL
+        let error = err; // để đây fix sau
+        let error1 = { ...err };
+
+        if (err.name === "CastError") { //Nhập sai data params trên URL
             error = handleCastErrorDB(err);
         }
-        if(err.code === 11000) { //Nhập trùng data của trường unique
+        if (err.code === 11000) { //Nhập trùng data của trường unique
             error = handleDuplicateFiledsDB(err);
         }
-        if(err.name === 'ValidationError') { //Nhập sai trường required
+        if (err.name === 'ValidationError') { //Nhập sai trường required
             error = handleValidationErrorDB(err);
         }
-        if(err.name === "TokenExpiredError") {
+        if (err.name === "TokenExpiredError") {
             error = handleTokenExpired();
         }
-        if(err.name === "JsonWebTokenError") {
+        if (err.name === "JsonWebTokenError") {
             error = handleJsonWebTokenError();
         }
 
-        sendErrorProd(error, res);
+        sendErrorProd(error, req, res);
     }
 };
