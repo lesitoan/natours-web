@@ -4,7 +4,7 @@ const { promisify } = require('util');
 const UserModel = require('../models/userModel');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
-const sendEmail = require('../utils/email');
+const Email = require('../utils/email');
 
 const signToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -45,6 +45,10 @@ const signUp = catchAsync(async (req, res, next) => {
         role: req.body.role || 'user'
     }
     const user = await UserModel.create(newUser);
+    
+    // send mail wellcome !!!
+    await new Email(user, 'no URL').sendWelcome();
+
     createAndSendToken(user, 201, res);
 });
 
@@ -113,15 +117,9 @@ const forgotPassword = catchAsync(async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
 
     // Gửi chuỗi token đó về mail
-    const resetURL = `${req.protocol}://${req.get('host')}/api/v1/users/reset-password/${resetToken}`;
-    const message = `Please click this URL in order to reset password \n${resetURL}`;
-
     try {
-        await sendEmail({
-            email: user.email,
-            subject: 'Your password reset token valid for 10 minutes',
-            message: message
-        });
+        const resetURL = `${req.protocol}://${req.get('host')}/api/v1/users/reset-password/${resetToken}`;
+        await new Email(user, resetURL).sendPasswordReset();
 
         res.status(200).json({
             status: 'success',
