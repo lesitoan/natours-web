@@ -45,7 +45,7 @@ const sendErrorProd = (err, req, res) => {
 }
 
 const handleCastErrorDB = (err) => {
-    console.log(err)
+    // console.log(err)
     return new AppError(`invalid ${err.path}: ${err.value}`, 400);
 }
 

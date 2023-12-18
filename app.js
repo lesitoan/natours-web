@@ -6,6 +6,7 @@ const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 const hpp = require('hpp');
 const cookieParser = require('cookie-parser');
+const compression = require('compression');
 const tourRouter = require('./routes/tourRoutes');
 const userRouter = require('./routes/userRoutes');
 const reviewRouter = require('./routes/reviewRoutes');
@@ -17,7 +18,7 @@ const app = express();
 
 app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'))
-console.log(path.join(__dirname, "views"));
+// console.log(path.join(__dirname, "views"));
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -48,6 +49,8 @@ app.use(hpp({
     whitelist: ['duration', 'ratingsQuantity', 'ratingsAverage', 'maxGroupSize', 'difficulty', 'price']
 }));
 
+
+app.use(compression());
 
 app.use("/", viewRouter);
 app.use("/api/v1/tours", tourRouter);

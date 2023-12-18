@@ -126,7 +126,7 @@ const forgotPassword = catchAsync(async (req, res, next) => {
             message: 'token send to email !!!'
         });
     } catch (err) {
-        console.log(err)
+        // console.log(err)
         user.passworResetToken = undefined,
             user.passworResetExpires = undefined,
             await user.save({ validateBeforeSave: false });
