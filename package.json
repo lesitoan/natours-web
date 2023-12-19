@@ -40,6 +40,6 @@
     "parcel-bundler": "^1.12.5"
   },
   "engines": {
-    "node": ">18.0.0"
+    "node": "10.15.3"
   }
 }
